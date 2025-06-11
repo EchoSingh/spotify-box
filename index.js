@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const SpotifyWebApi = require('spotify-web-api-node');
 const { Octokit } = require("@octokit/rest");
 
@@ -16,125 +16,116 @@ const octokit = new Octokit({
     auth: `token ${githubToken}`
 });
 
-var spotifyApi = new SpotifyWebApi({
+const spotifyApi = new SpotifyWebApi({
     clientId: client_id,
     clientSecret: client_secret,
     refreshToken: refresh_token
 });
 
-function truncate(str, n){
-    return (str.length > n) ? str.substr(0, n-1) + '…' : str;
-};
+function truncate(str, n) {
+    return (str.length > n) ? str.substr(0, n - 1) + '…' : str;
+}
 
-async function updateGist(lines, des) {
+async function updateGist(content, description) {
     let gist;
     try {
-      gist = await octokit.gists.get({ gist_id: gistId });
+        gist = await octokit.gists.get({ gist_id: gistId });
     } catch (error) {
-      console.error(`Unable to get gist\n${error}`);
+        console.error(`Unable to get gist\n${error}`);
+        return;
     }
 
     const filename = Object.keys(gist.data.files)[0];
-  
-    try {
-      await octokit.gists.update({
-        gist_id: gistId,
-        description: `🎧 Spotify | ${des}`,
-        files: {
-          [filename]: {
-              content: lines
-          }
-        }
-      });
-    } catch (error) {
-      console.error(`Unable to update gist\n${error}`);
-    }
-  }
 
+    try {
+        await octokit.gists.update({
+            gist_id: gistId,
+            description: `🎧 Spotify | ${description}`,
+            files: {
+                [filename]: {
+                    content: content
+                }
+            }
+        });
+    } catch (error) {
+        console.error(`Unable to update gist\n${error}`);
+    }
+}
 
 async function getTopTracks() {
     try {
-        var topTracks = await spotifyApi.getMyTopTracks({ time_range: time_range, limit: 5 })
-        var tracks = topTracks.body.items.map((track) => ({
-            artist: track.artists.map((_artist) => _artist.name)[0],
-            title: track.name
-        }));
-
-        var lines = [];
-        tracks.forEach(track => {
-            lines.push(` ▶ ${truncate(track.title + " ", 35).padEnd(35, '.')} 🎵 ${truncate(track.artist + " ", 16)}`)
-        })
+        const topTracks = await spotifyApi.getMyTopTracks({ time_range: time_range, limit: 5 });
+        const lines = topTracks.body.items.map(track => {
+            const artist = track.artists[0].name;
+            return ` ▶ ${truncate(track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}`;
+        });
         return lines.join("\n");
     } catch (error) {
-        console.log('Something went wrong!', error);
+        console.log('Error getting top tracks:', error);
+        return '';
     }
 }
 
 async function getTopArtists() {
     try {
-        var topArtists = await spotifyApi.getMyTopArtists({ time_range: time_range, limit: 5 })
-        var artists = topArtists.body.items.map((artist) => ({
-            artist: artist.name,
-            genres: artist.genres.slice(0, 2)
-        }));
-
-        var lines = [];
-        artists.forEach(artist => {
-            lines.push(` ▶ ${truncate(artist.artist + " ", 15).padEnd(15, '.')} 💽 ${truncate(artist.genres.join(", ") + " ", 40)}`)
-        })
+        const topArtists = await spotifyApi.getMyTopArtists({ time_range: time_range, limit: 5 });
+        const lines = topArtists.body.items.map(artist => {
+            const genres = artist.genres.slice(0, 2).join(", ");
+            return ` ▶ ${truncate(artist.name + " ", 15).padEnd(15, '.')} 💽 ${truncate(genres + " ", 40)}`;
+        });
         return lines.join("\n");
     } catch (error) {
-        console.log('Something went wrong!', error);
+        console.log('Error getting top artists:', error);
+        return '';
     }
 }
 
-
 async function getRecentlyPlayed() {
     try {
-        var recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 5 })
-        var tracks = recentlyPlayed.body.items.map((play) => ({
-            artist: play.track.artists.map((_artist) => _artist.name)[0],
-            title: play.track.name
-        }));
-
-        var lines = [];
-
-        tracks.forEach(track => {
-            lines.push(` ▶ ${truncate(track.title + " ", 35).padEnd(35, '.')} 🎵 ${truncate(track.artist + " ", 16)}`)
-        })
-
+        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 5 });
+        const lines = recentlyPlayed.body.items.map(play => {
+            const artist = play.track.artists[0].name;
+            return ` ▶ ${truncate(play.track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}`;
+        });
         return lines.join("\n");
-        
     } catch (error) {
-        console.log('Something went wrong!', error);
+        console.log('Error getting recently played tracks:', error);
+        return '';
     }
 }
 
 async function main() {
     try {
-        var accessToken = await spotifyApi.refreshAccessToken()
+        const accessToken = await spotifyApi.refreshAccessToken();
         spotifyApi.setAccessToken(accessToken.body['access_token']);
 
-        var res;
-        var des;
-        if(type === 'recently_played') {
-            res = await getRecentlyPlayed()
-            des = "Recently Played"
+        let res;
+        let des;
+
+        if (type === 'combined') {
+            const [recent, artists] = await Promise.all([
+                getRecentlyPlayed(),
+                getTopArtists()
+            ]);
+            res = `🎧 Recently Played:\n${recent}\n\n🌟 Top Artists:\n${artists}`;
+            des = "Recent & Top Artists";
+        } else if (type === 'recently_played') {
+            res = await getRecentlyPlayed();
+            des = "Recently Played";
         } else if (type === 'top_tracks') {
-            res = await getTopTracks()
-            des = "My Top Tracks"
+            res = await getTopTracks();
+            des = "My Top Tracks";
         } else {
-            res = await getTopArtists()
-            des = "My Top Artists"
+            res = await getTopArtists();
+            des = "My Top Artists";
         }
+
         console.log(res);
-        await updateGist(res, des)
+        await updateGist(res, des);
     } catch (error) {
-        console.log('Something went wrong!', error);
+        console.log('Something went wrong in main():', error);
     }
 }
-
-
 
 (async () => {
     await main();
