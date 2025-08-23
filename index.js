@@ -82,15 +82,14 @@ async function getTopArtists() {
 
 async function getRecentlyPlayed() {
     try {
-        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 3 });
+        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 2 });
         const lines = recentlyPlayed.body.items.map(play => {
             const track = play.track;
-            const artist = track.artists[0].name;
-            const imageUrl = track.album.images[0]?.url || "";
-
-            return `▶ ${truncate(track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}\n![Cover](${imageUrl})`;
+            const imageUrl = track.album.images[2]?.url || track.album.images[1]?.url || track.album.images[0]?.url || "";
+            const artists = track.artists.map(artist => artist.name).join(', ');
+            return `![cover](${imageUrl}) **${truncate(track.name, 50)}**\n*by ${truncate(artists, 40)}*`;
         });
-        return lines.join("\n\n"); // spacing between tracks
+        return lines.join("\n\n");
     } catch (error) {
         console.log('Error getting recently played tracks:', error);
         return '';
