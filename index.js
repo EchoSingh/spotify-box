@@ -35,14 +35,17 @@ async function updateGist(content, description) {
         return;
     }
 
-    const filename = Object.keys(gist.data.files)[0];
+    const oldFilename = Object.keys(gist.data.files)[0];
+    const newFilename = oldFilename.endsWith('.md') ? oldFilename : `${oldFilename.split('.').shift()}.md`;
+
 
     try {
         await octokit.gists.update({
             gist_id: gistId,
             description: `🎧 Spotify | ${description}`,
             files: {
-                [filename]: {
+                [oldFilename]: {
+                    filename: newFilename,
                     content: content
                 }
             }
@@ -82,8 +85,21 @@ async function getTopArtists() {
 
 async function getRecentlyPlayed() {
     try {
-        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 2 });
-        const lines = recentlyPlayed.body.items.map(play => {
+        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 20 }); // Fetch more to find unique ones
+        const uniqueTracks = [];
+        const trackIds = new Set();
+
+        for (const item of recentlyPlayed.body.items) {
+            if (!trackIds.has(item.track.id)) {
+                trackIds.add(item.track.id);
+                uniqueTracks.push(item);
+            }
+            if (uniqueTracks.length >= 2) {
+                break;
+            }
+        }
+
+        const lines = uniqueTracks.slice(0, 2).map(play => {
             const track = play.track;
             const imageUrl = track.album.images[2]?.url || track.album.images[1]?.url || track.album.images[0]?.url || "";
             const artists = track.artists.map(artist => artist.name).join(', ');
