@@ -101,9 +101,14 @@ async function getRecentlyPlayed() {
 
         const lines = uniqueTracks.slice(0, 2).map(play => {
             const track = play.track;
-            const imageUrl = track.album.images[2]?.url || track.album.images[1]?.url || track.album.images[0]?.url || "";
             const artists = track.artists.map(artist => artist.name).join(', ');
-            return `![cover](${imageUrl}) **${truncate(track.name, 50)}**\n*by ${truncate(artists, 40)}*`;
+            const album = track.album.name;
+            const popularity = track.popularity; // number from 0 to 100
+
+            // Let's create a simple popularity bar
+            const popularityBar = '█'.repeat(Math.round(popularity / 10)) + '░'.repeat(10 - Math.round(popularity / 10));
+
+            return `🎵 **${truncate(track.name, 30)}**\n   - Artist(s): *${truncate(artists, 40)}*\n   - Album: *${truncate(album, 30)}*\n   - Popularity: ${popularityBar}`;
         });
         return lines.join("\n\n");
     } catch (error) {
