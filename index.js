@@ -57,7 +57,7 @@ async function getTopTracks() {
         const topTracks = await spotifyApi.getMyTopTracks({ time_range: time_range, limit: 5 });
         const lines = topTracks.body.items.map(track => {
             const artist = track.artists[0].name;
-            return ` ▶ ${truncate(track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}`;
+            return `▶ ${truncate(track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}`;
         });
         return lines.join("\n");
     } catch (error) {
@@ -71,7 +71,7 @@ async function getTopArtists() {
         const topArtists = await spotifyApi.getMyTopArtists({ time_range: time_range, limit: 5 });
         const lines = topArtists.body.items.map(artist => {
             const genres = artist.genres.slice(0, 2).join(", ");
-            return ` ▶ ${truncate(artist.name + " ", 15).padEnd(15, '.')} 💽 ${truncate(genres + " ", 40)}`;
+            return `▶ ${truncate(artist.name + " ", 15).padEnd(15, '.')} 💽 ${truncate(genres + " ", 40)}`;
         });
         return lines.join("\n");
     } catch (error) {
@@ -82,12 +82,15 @@ async function getTopArtists() {
 
 async function getRecentlyPlayed() {
     try {
-        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 5 });
+        const recentlyPlayed = await spotifyApi.getMyRecentlyPlayedTracks({ limit: 3 });
         const lines = recentlyPlayed.body.items.map(play => {
-            const artist = play.track.artists[0].name;
-            return ` ▶ ${truncate(play.track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}`;
+            const track = play.track;
+            const artist = track.artists[0].name;
+            const imageUrl = track.album.images[0]?.url || "";
+
+            return `▶ ${truncate(track.name + " ", 35).padEnd(35, '.')} 🎵 ${truncate(artist + " ", 16)}\n![Cover](${imageUrl})`;
         });
-        return lines.join("\n");
+        return lines.join("\n\n"); // spacing between tracks
     } catch (error) {
         console.log('Error getting recently played tracks:', error);
         return '';
