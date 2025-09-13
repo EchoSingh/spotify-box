@@ -108,7 +108,7 @@ async function getRecentlyPlayed() {
             // Let's create a simple popularity bar
             const popularityBar = '█'.repeat(Math.round(popularity / 10)) + '░'.repeat(10 - Math.round(popularity / 10));
 
-            return `🎵 **${truncate(track.name, 30)}**\n   - Artist(s): *${truncate(artists, 40)}*\n   - Album: *${truncate(album, 30)}*\n   - Popularity: ${popularityBar}`;
+            return `🎵 ${truncate(track.name, 30)}\n   - Artist(s): ${truncate(artists, 40)}\n   - Album: ${truncate(album, 30)}\n   - Popularity: ${popularityBar}`;
         });
         return lines.join("\n\n");
     } catch (error) {
